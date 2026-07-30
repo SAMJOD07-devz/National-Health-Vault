@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { LogOut, Search, User, FilePlus, ShieldCheck } from 'lucide-react';
+import { LogOut, Search, User, FilePlus, ShieldCheck, Sparkles, Clock, Calendar, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Patient, Visit, Medication } from '../types/database';
 import AddVisitForm from '../components/forms/AddVisitForm';
@@ -138,6 +138,111 @@ export default function DoctorDashboard() {
             <p>Only search for patients currently under your care.</p>
           </div>
         </div>
+
+        {/* Welcome Dashboard when no patient is selected */}
+        {!selectedPatient && !loadingSearch && (
+          <div className="mt-8 space-y-6 animate-fade-in">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Welcome Card */}
+              <div className="md:col-span-2 bg-gradient-to-br from-nhv-blue to-blue-900 rounded-2xl p-8 text-white shadow-lg relative overflow-hidden">
+                <div className="relative z-10">
+                  <h2 className="text-3xl font-bold mb-2">Welcome back, Dr. {user.profiles?.last_name}</h2>
+                  <p className="text-blue-200 mb-8 max-w-md">Your clinical dashboard is ready. Search for a patient using their Health ID to view their full medical history securely.</p>
+                  
+                  <div className="flex gap-4">
+                    <div className="bg-white/10 backdrop-blur-md px-5 py-4 rounded-xl border border-white/20">
+                      <p className="text-sm text-blue-200 font-medium">Patients Today</p>
+                      <p className="text-3xl font-bold mt-1">14</p>
+                    </div>
+                    <div className="bg-white/10 backdrop-blur-md px-5 py-4 rounded-xl border border-white/20">
+                      <p className="text-sm text-blue-200 font-medium">Pending Reviews</p>
+                      <p className="text-3xl font-bold mt-1">3</p>
+                    </div>
+                  </div>
+                </div>
+                <ShieldCheck className="absolute -right-10 -bottom-10 w-64 h-64 text-white opacity-5" />
+              </div>
+
+              {/* AI Assistant Promo Card */}
+              <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+                <div>
+                  <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center mb-4">
+                    <Sparkles className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-800 mb-2">Gemma AI is Active</h3>
+                  <p className="text-sm text-slate-500 mb-4 leading-relaxed">
+                    The NLP notes processor is running. Just type your shorthand notes during the visit and Gemma will automatically structure them into the patient's record.
+                  </p>
+                </div>
+                <div className="text-xs font-bold tracking-wider text-purple-600 bg-purple-50 px-3 py-3 rounded-xl text-center uppercase border border-purple-100">
+                  Powered by Google Gemma
+                </div>
+              </div>
+            </div>
+
+            {/* Today's Schedule (Mock Data for UI) */}
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-50 text-nhv-blue rounded-lg">
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-800">Today's Appointments</h3>
+                </div>
+                <span className="text-sm font-medium text-nhv-blue bg-blue-50 px-3 py-1 rounded-full cursor-pointer hover:bg-blue-100 transition-colors">View Full Schedule</span>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-sm text-slate-500">
+                      <th className="py-3 px-4 font-medium">Time</th>
+                      <th className="py-3 px-4 font-medium">Patient Name</th>
+                      <th className="py-3 px-4 font-medium">Health ID</th>
+                      <th className="py-3 px-4 font-medium">Reason for Visit</th>
+                      <th className="py-3 px-4 font-medium text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-sm">
+                    <tr className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                      <td className="py-4 px-4 text-slate-600 flex items-center gap-2"><Clock className="w-4 h-4" /> 09:00 AM</td>
+                      <td className="py-4 px-4 font-semibold text-slate-800">Rahul Sharma</td>
+                      <td className="py-4 px-4 font-mono text-slate-500 text-xs">NHV-2026-000001</td>
+                      <td className="py-4 px-4 text-slate-600">Routine Checkup</td>
+                      <td className="py-4 px-4 text-right">
+                        <span className="inline-flex items-center gap-1 text-green-600 bg-green-50 px-2.5 py-1 rounded-full text-xs font-semibold border border-green-100">
+                          <CheckCircle2 className="w-3 h-3" /> Completed
+                        </span>
+                      </td>
+                    </tr>
+                    <tr className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                      <td className="py-4 px-4 text-slate-600 flex items-center gap-2"><Clock className="w-4 h-4" /> 11:30 AM</td>
+                      <td className="py-4 px-4 font-semibold text-slate-800">Priya Patel</td>
+                      <td className="py-4 px-4 font-mono text-slate-500 text-xs">NHV-2026-982341</td>
+                      <td className="py-4 px-4 text-slate-600">Post-Op Review</td>
+                      <td className="py-4 px-4 text-right">
+                        <span className="inline-flex items-center gap-1 text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full text-xs font-semibold border border-amber-100">
+                           Waiting
+                        </span>
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-slate-50 transition-colors">
+                      <td className="py-4 px-4 text-slate-600 flex items-center gap-2"><Clock className="w-4 h-4" /> 02:15 PM</td>
+                      <td className="py-4 px-4 font-semibold text-slate-800">Amit Kumar</td>
+                      <td className="py-4 px-4 font-mono text-slate-500 text-xs">NHV-2026-445892</td>
+                      <td className="py-4 px-4 text-slate-600">Cardiology Consult</td>
+                      <td className="py-4 px-4 text-right">
+                        <span className="inline-flex items-center gap-1 text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full text-xs font-semibold border border-slate-200">
+                           Scheduled
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Patient Dashboard View */}
         {selectedPatient && (

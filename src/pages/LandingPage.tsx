@@ -1,10 +1,31 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Shield, Key, FileHeart, Activity, Bot, Zap, Globe, HeartPulse } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Shield, Key, FileHeart, Activity, Bot, Zap, Globe, HeartPulse, ArrowUp } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import OrbCanvas from '../components/3D/Orb';
 
 export default function LandingPage() {
+  const [showTopBtn, setShowTopBtn] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 400) {
+        setShowTopBtn(true);
+      } else {
+        setShowTopBtn(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
+  };
+
   return (
     <div className="min-h-screen bg-nhv-dark text-white overflow-x-hidden selection:bg-nhv-accent selection:text-white">
       <Navbar />
@@ -248,6 +269,21 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Back to Top Button */}
+      <AnimatePresence>
+        {showTopBtn && (
+          <motion.button
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            onClick={scrollToTop}
+            className="fixed bottom-8 right-8 z-50 p-4 rounded-full bg-nhv-accent/20 border border-nhv-accent/50 text-nhv-accent backdrop-blur-md shadow-[0_0_15px_rgba(45,212,191,0.3)] hover:bg-nhv-accent hover:text-white hover:shadow-[0_0_25px_rgba(45,212,191,0.6)] transition-all duration-300 group"
+          >
+            <ArrowUp className="w-6 h-6 group-hover:-translate-y-1 transition-transform" />
+          </motion.button>
+        )}
+      </AnimatePresence>
 
     </div>
   );

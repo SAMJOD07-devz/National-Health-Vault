@@ -150,7 +150,7 @@ export default function RawNotesProcessor({ patientId, doctorId, hospitalName, p
       const interactionModel = genAI.getGenerativeModel({
         model: 'gemini-3.6-flash',
         tools: [{ functionDeclarations: [flagInteractionSchema] }],
-        toolConfig: { functionCallingConfig: { mode: 'ANY', allowedFunctionNames: ['flag_interaction'] } }
+        toolConfig: { functionCallingConfig: { mode: 'ANY' as any, allowedFunctionNames: ['flag_interaction'] } }
       });
 
       const prompt = `Given the new medications [${newMedNames.join(', ')}] being prescribed, the patient's current active medications [${existingMedNames.join(', ')}], and known allergies [${patientAllergies.join(', ')}], check for drug-drug or drug-allergy interactions. Call flag_interaction with severity ("none", "caution", "severe") and explanation.`;

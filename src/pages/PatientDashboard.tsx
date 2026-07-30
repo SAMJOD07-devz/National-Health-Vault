@@ -4,6 +4,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { LogOut, Activity, Droplet, AlertTriangle, Pill, Clock, FileText, ShieldCheck } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Medication, Visit, AuditLog } from '../types/database';
+import PatientChatbot from '../components/patient/PatientChatbot';
 
 export default function PatientDashboard() {
   const { user, role, logout } = useAuth();
@@ -229,6 +230,9 @@ export default function PatientDashboard() {
           </>
         )}
       </main>
+      
+      {/* AI Chatbot Widget */}
+      <PatientChatbot patientId={user.id} />
     </div>
   );
 }

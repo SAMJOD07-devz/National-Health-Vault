@@ -26,7 +26,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginPatient = async (aadhaar: string) => {
     let searchAadhaar = aadhaar;
-    if (aadhaar.length === 4) {
+    if (aadhaar.length === 12) {
+      searchAadhaar = `XXXX-XXXX-${aadhaar.slice(-4)}`;
+    } else if (aadhaar.length === 4) {
       searchAadhaar = `XXXX-XXXX-${aadhaar}`;
     }
 

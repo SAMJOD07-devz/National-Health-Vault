@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import type { Patient, Visit, Medication } from '../types/database';
 import AddVisitForm from '../components/forms/AddVisitForm';
 import AddMedicationForm from '../components/forms/AddMedicationForm';
+import RawNotesProcessor from '../components/doctor/RawNotesProcessor';
 
 export default function DoctorDashboard() {
   const { user, role, logout } = useAuth();
@@ -143,20 +144,8 @@ export default function DoctorDashboard() {
           <div className="space-y-6 animate-fade-in">
             {/* Action Bar */}
             <div className="flex flex-wrap gap-3">
-              <button 
-                onClick={() => setShowAddVisit(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-nhv-blue text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
-              >
-                <Activity className="w-4 h-4" /> Record Visit
-              </button>
-              <button 
-                onClick={() => setShowAddMedication(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors shadow-sm"
-              >
-                <Pill className="w-4 h-4 text-nhv-green" /> Prescribe Meds
-              </button>
               <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors shadow-sm">
-                <FilePlus className="w-4 h-4 text-nhv-accent" /> Upload Report
+                <FilePlus className="w-4 h-4 text-nhv-accent" /> Upload External Report
               </button>
             </div>
 
@@ -194,6 +183,15 @@ export default function DoctorDashboard() {
                 </div>
               </div>
             </div>
+
+            {/* AI Notes Processor */}
+            <RawNotesProcessor 
+              patientId={selectedPatient.id}
+              doctorId={user.id}
+              hospitalName={user.hospital}
+              patientAllergies={selectedPatient.allergies || []}
+              onSuccess={handleDataAdded}
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Active Medications */}

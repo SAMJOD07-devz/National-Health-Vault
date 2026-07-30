@@ -35,7 +35,7 @@ export default function LoginPage() {
     if (success) {
       navigate('/patient/dashboard');
     } else {
-      setError('Invalid Aadhaar (Try ending with 4589 for Rahul)');
+      setError('Invalid Aadhaar. Patient record not found.');
       setShowOtp(false);
     }
   };

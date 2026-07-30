@@ -76,7 +76,8 @@ export default function LoginPage() {
   const [activeTab, setActiveTab] = useState<'patient' | 'doctor' | 'admin'>('patient');
   const [aadhaar, setAadhaar] = useState('');
   const [license, setLicense] = useState('');
-  const [adminCode, setAdminCode] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
   
   const [showOtp, setShowOtp] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -123,12 +124,12 @@ export default function LoginPage() {
   const handleAdminSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const success = await loginAdmin(adminCode);
+    const success = await loginAdmin(adminEmail, adminPassword);
     setLoading(false);
     if (success) {
       navigate('/admin/dashboard');
     } else {
-      setError('Invalid Admin Code (Try ADMIN-NHV)');
+      setError('Invalid Email or Password. Please check your Supabase Auth credentials.');
     }
   };
 
@@ -257,15 +258,27 @@ export default function LoginPage() {
 
           {activeTab === 'admin' && (
             <form onSubmit={handleAdminSubmit} className="space-y-6 animate-fade-in">
-              <div>
-                <label className="block text-base font-semibold text-gray-300 mb-2">Admin Access Code</label>
-                <input 
-                  type="password" 
-                  placeholder="e.g. ADMIN-NHV"
-                  className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-purple-400/50 focus:border-purple-400 outline-none text-white text-lg transition-all tracking-widest font-mono"
-                  value={adminCode}
-                  onChange={(e) => setAdminCode(e.target.value)}
-                />
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-base font-semibold text-gray-300 mb-2">Admin Email</label>
+                  <input 
+                    type="email" 
+                    autoComplete="off"
+                    className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-purple-400/50 focus:border-purple-400 outline-none text-white text-lg transition-all"
+                    value={adminEmail}
+                    onChange={(e) => setAdminEmail(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-base font-semibold text-gray-300 mb-2">Admin Password</label>
+                  <input 
+                    type="password" 
+                    autoComplete="new-password"
+                    className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-purple-400/50 focus:border-purple-400 outline-none text-white text-lg transition-all"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                  />
+                </div>
               </div>
               <button 
                 type="submit" 

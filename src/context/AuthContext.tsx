@@ -12,7 +12,7 @@ interface AuthState {
 interface AuthContextType extends AuthState {
   loginPatient: (aadhaar: string) => Promise<boolean>;
   loginDoctor: (licenseNo: string) => Promise<boolean>;
-  loginAdmin: (adminCode: string) => Promise<boolean>;
+  loginAdmin: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
 }
 
@@ -72,18 +72,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
-  const loginAdmin = async (adminCode: string) => {
-    // For hackathon purposes, hardcode a simple admin code.
-    // In a real app, this would verify against a users table with role='admin'
-    if (adminCode === 'ADMIN-NHV') {
-      setAuthState({
-        isAuthenticated: true,
-        user: { id: 'admin-1', name: 'System Administrator' },
-        role: 'admin',
-      });
-      return true;
+  const loginAdmin = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error || !data.user) {
+      console.error('Admin login failed:', error);
+      return false;
     }
-    return false;
+
+    setAuthState({
+      isAuthenticated: true,
+      user: { id: data.user.id, name: 'System Administrator' },
+      role: 'admin',
+    });
+    return true;
   };
 
   const logout = () => {

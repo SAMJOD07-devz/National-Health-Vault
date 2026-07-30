@@ -4,13 +4,14 @@ import type { Patient, Doctor, UserRole } from '../types/database';
 
 interface AuthState {
   isAuthenticated: boolean;
-  user: any | null; // Patient or Doctor
+  user: any | null; // Patient or Doctor or Admin
   role: UserRole | null;
 }
 
 interface AuthContextType extends AuthState {
   loginPatient: (aadhaar: string) => Promise<boolean>;
   loginDoctor: (licenseNo: string) => Promise<boolean>;
+  loginAdmin: (adminCode: string) => Promise<boolean>;
   logout: () => void;
 }
 
@@ -24,8 +25,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const loginPatient = async (aadhaar: string) => {
-    // We expect the aadhaar to match exactly the masked format, e.g. XXXX-XXXX-4589
-    // For demo purposes, if user types just 4 digits, we format it.
     let searchAadhaar = aadhaar;
     if (aadhaar.length === 4) {
       searchAadhaar = `XXXX-XXXX-${aadhaar}`;
@@ -38,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .single();
 
     if (error || !data) {
-      console.error('Login failed:', error);
+      console.error('Patient login failed:', error);
       return false;
     }
 
@@ -70,6 +69,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
+  const loginAdmin = async (adminCode: string) => {
+    // For hackathon purposes, hardcode a simple admin code.
+    // In a real app, this would verify against a users table with role='admin'
+    if (adminCode === 'ADMIN-NHV') {
+      setAuthState({
+        isAuthenticated: true,
+        user: { id: 'admin-1', name: 'System Administrator' },
+        role: 'admin',
+      });
+      return true;
+    }
+    return false;
+  };
+
   const logout = () => {
     setAuthState({
       isAuthenticated: false,
@@ -79,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ ...authState, loginPatient, loginDoctor, logout }}>
+    <AuthContext.Provider value={{ ...authState, loginPatient, loginDoctor, loginAdmin, logout }}>
       {children}
     </AuthContext.Provider>
   );

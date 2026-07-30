@@ -97,7 +97,7 @@ export default function PatientChatbot({ patientId }: PatientChatbotProps) {
             <div className="flex items-center gap-2">
               <Bot className="w-6 h-6" />
               <div>
-                <h3 className="font-bold text-sm">Health Assistant</h3>
+                <h3 className="font-bold text-sm">GEMMA Health Assistant</h3>
                 <p className="text-[10px] text-blue-200">Powered by Gemma 4</p>
               </div>
             </div>
@@ -144,7 +144,7 @@ export default function PatientChatbot({ patientId }: PatientChatbotProps) {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 placeholder="Ask about your health record..."
-                className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-nhv-blue/50 text-sm"
+                className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-nhv-blue/50 text-sm text-slate-900 placeholder:text-slate-400"
                 disabled={loading}
               />
               <button

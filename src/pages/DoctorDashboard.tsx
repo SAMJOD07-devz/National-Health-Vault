@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { LogOut, Search, User, FilePlus, Activity, Pill, ShieldCheck } from 'lucide-react';
+import { LogOut, Search, User, FilePlus, ShieldCheck } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Patient, Visit, Medication } from '../types/database';
 import AddVisitForm from '../components/forms/AddVisitForm';

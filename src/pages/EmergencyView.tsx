@@ -15,7 +15,7 @@ export default function EmergencyView() {
     const fetchPatient = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('patients')
           .select('*, profiles(first_name, last_name)')
           .eq('health_id', id.toUpperCase())

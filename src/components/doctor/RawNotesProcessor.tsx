@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { genAI } from '../../lib/gemma';
 import { Activity, Wand2, ShieldAlert, CheckCircle, AlertTriangle } from 'lucide-react';

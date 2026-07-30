@@ -1,19 +1,47 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { AlertTriangle, Droplet, HeartPulse, ChevronLeft } from 'lucide-react';
-import { mockPatients } from '../data/mockDb';
-import type { Patient } from '../data/mockDb';
+import { AlertTriangle, Droplet, HeartPulse, ChevronLeft, Activity } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import type { Patient } from '../types/database';
 
 export default function EmergencyView() {
   const { id } = useParams<{ id: string }>();
   const [patient, setPatient] = useState<Patient | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (id) {
-      const found = mockPatients.find(p => p.id === id);
-      setPatient(found || null);
-    }
+    if (!id) return;
+
+    const fetchPatient = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('patients')
+          .select('*, profiles(first_name, last_name)')
+          .eq('health_id', id.toUpperCase())
+          .single();
+
+        if (data) {
+          setPatient(data as unknown as Patient);
+        }
+      } catch (err) {
+        console.error('Error fetching emergency patient:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPatient();
   }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-4">
+        <Activity className="w-12 h-12 text-red-500 animate-pulse mb-4" />
+        <p className="text-gray-400">Accessing Emergency Records...</p>
+      </div>
+    );
+  }
 
   if (!patient) {
     return (
@@ -39,10 +67,10 @@ export default function EmergencyView() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl">
             <h2 className="text-gray-400 text-sm uppercase tracking-wider mb-2">Patient Name</h2>
-            <p className="text-3xl font-bold">{patient.name}</p>
+            <p className="text-3xl font-bold">{patient.profiles?.first_name} {patient.profiles?.last_name}</p>
             <div className="mt-4 pt-4 border-t border-zinc-800 text-sm text-gray-400">
-              <p>ID: {patient.id}</p>
-              <p>DOB: {patient.dob} ({new Date().getFullYear() - new Date(patient.dob).getFullYear()} yrs)</p>
+              <p>ID: {patient.health_id}</p>
+              <p>DOB: {patient.date_of_birth}</p>
             </div>
           </div>
 
@@ -50,7 +78,7 @@ export default function EmergencyView() {
             <Droplet className="w-16 h-16 text-red-500 shrink-0" />
             <div>
               <h2 className="text-gray-400 text-sm uppercase tracking-wider mb-1">Blood Group</h2>
-              <p className="text-6xl font-bold text-red-500">{patient.bloodGroup}</p>
+              <p className="text-6xl font-bold text-red-500">{patient.blood_group}</p>
             </div>
           </div>
         </div>
@@ -62,7 +90,7 @@ export default function EmergencyView() {
           </h2>
           
           <div className="space-y-4">
-            {patient.allergies.length > 0 ? (
+            {patient.allergies && patient.allergies.length > 0 ? (
               <div className="p-4 bg-red-900/20 border border-red-900/50 rounded-lg">
                 <h3 className="text-red-400 font-semibold mb-2 uppercase text-sm">Severe Allergies</h3>
                 <p className="text-xl font-medium text-white">{patient.allergies.join(', ')}</p>
@@ -70,10 +98,17 @@ export default function EmergencyView() {
             ) : (
               <p className="text-gray-500">No known allergies.</p>
             )}
+            
+            {patient.critical_conditions && patient.critical_conditions.length > 0 && (
+              <div className="p-4 bg-orange-900/20 border border-orange-900/50 rounded-lg mt-4">
+                <h3 className="text-orange-400 font-semibold mb-2 uppercase text-sm">Critical Conditions</h3>
+                <p className="text-xl font-medium text-white">{patient.critical_conditions.join(', ')}</p>
+              </div>
+            )}
 
             <div className="p-4 bg-zinc-800/50 rounded-lg">
               <h3 className="text-gray-400 font-semibold mb-2 uppercase text-sm">Emergency Contact</h3>
-              <p className="text-xl font-medium text-white">{patient.emergencyContact}</p>
+              <p className="text-xl font-medium text-white">{patient.emergency_contact}</p>
             </div>
           </div>
         </div>

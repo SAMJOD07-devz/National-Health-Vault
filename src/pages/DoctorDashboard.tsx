@@ -1,15 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { LogOut, Search, User, FilePlus, Activity, Pill, ShieldCheck } from 'lucide-react';
-import { mockPatients, mockVisits, mockMedications } from '../data/mockDb';
-import type { Patient } from '../data/mockDb';
+import { supabase } from '../lib/supabase';
+import type { Patient, Visit, Medication } from '../types/database';
+import AddVisitForm from '../components/forms/AddVisitForm';
+import AddMedicationForm from '../components/forms/AddMedicationForm';
 
 export default function DoctorDashboard() {
   const { user, role, logout } = useAuth();
   const navigate = useNavigate();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [patientVisits, setPatientVisits] = useState<Visit[]>([]);
+  const [activeMeds, setActiveMeds] = useState<Medication[]>([]);
+  
+  const [loadingSearch, setLoadingSearch] = useState(false);
+  const [searchError, setSearchError] = useState('');
+
+  // Modals state
+  const [showAddVisit, setShowAddVisit] = useState(false);
+  const [showAddMedication, setShowAddMedication] = useState(false);
 
   if (!user || role !== 'doctor') {
     return <Navigate to="/login" replace />;
@@ -20,17 +32,53 @@ export default function DoctorDashboard() {
     navigate('/');
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Simple mock search by ID or last 4 digits of Aadhaar
-    const found = mockPatients.find(p => 
-      p.id.toLowerCase() === searchQuery.toLowerCase() || 
-      p.aadhaarMasked.endsWith(searchQuery)
-    );
-    setSelectedPatient(found || null);
+  const fetchPatientData = async (patientId: string) => {
+    try {
+      const [visitsRes, medsRes] = await Promise.all([
+        supabase.from('visits').select('*').eq('patient_id', patientId).order('visit_date', { ascending: false }),
+        supabase.from('medications').select('*').eq('patient_id', patientId).eq('status', 'active')
+      ]);
+
+      if (visitsRes.data) setPatientVisits(visitsRes.data);
+      if (medsRes.data) setActiveMeds(medsRes.data);
+    } catch (error) {
+      console.error('Error fetching patient clinical data:', error);
+    }
   };
 
-  const activeMeds = selectedPatient ? mockMedications.filter(m => m.patientId === selectedPatient.id && m.status === 'active') : [];
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoadingSearch(true);
+    setSearchError('');
+    setSelectedPatient(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('patients')
+        .select('*, profiles(first_name, last_name, phone)')
+        .eq('health_id', searchQuery.toUpperCase())
+        .single();
+
+      if (error || !data) {
+        setSearchError('No patient found with that Health ID.');
+      } else {
+        setSelectedPatient(data as unknown as Patient);
+        await fetchPatientData(data.id);
+      }
+    } catch (err) {
+      setSearchError('An error occurred during search.');
+    } finally {
+      setLoadingSearch(false);
+    }
+  };
+
+  const handleDataAdded = () => {
+    setShowAddVisit(false);
+    setShowAddMedication(false);
+    if (selectedPatient) {
+      fetchPatientData(selectedPatient.id);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-nhv-lightGray pb-12">
@@ -43,7 +91,7 @@ export default function DoctorDashboard() {
           </div>
           <div className="flex items-center gap-4">
             <div className="text-sm text-right hidden sm:block">
-              <p className="font-semibold text-slate-800">{user.name}</p>
+              <p className="font-semibold text-slate-800">Dr. {user.profiles?.first_name} {user.profiles?.last_name}</p>
               <p className="text-slate-500">{user.specialization} • {user.hospital}</p>
             </div>
             <button 
@@ -60,143 +108,156 @@ export default function DoctorDashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         
         {/* Search Bar */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <form onSubmit={handleSearch} className="flex gap-4 max-w-2xl mx-auto">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <input 
-                type="text" 
-                placeholder="Search patient by Health ID (e.g. P-1001) or last 4 digits of Aadhaar (e.g. 4589)" 
-                className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-nhv-blue focus:border-transparent"
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div className="w-full md:w-1/2">
+            <h2 className="text-lg font-semibold text-slate-800 mb-2">Search Patient Record</h2>
+            <form onSubmit={handleSearch} className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-slate-400" />
+              </div>
+              <input
+                type="text"
+                className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-nhv-blue/50 sm:text-sm transition-all"
+                placeholder="Enter Health ID (e.g., NHV-2026-000001)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-            </div>
-            <button type="submit" className="bg-nhv-blue text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-800 transition-colors whitespace-nowrap">
-              Search Record
-            </button>
-          </form>
+              <button 
+                type="submit" 
+                disabled={loadingSearch || !searchQuery}
+                className="absolute inset-y-1 right-1 px-4 bg-nhv-blue text-white rounded-lg hover:bg-blue-700 font-medium text-sm transition-colors disabled:opacity-70"
+              >
+                {loadingSearch ? 'Searching...' : 'Search'}
+              </button>
+            </form>
+            {searchError && <p className="text-red-500 text-sm mt-2">{searchError}</p>}
+          </div>
+          <div className="hidden md:flex text-slate-400 flex-col items-end text-sm">
+            <p>Accessing medical records is strictly audited.</p>
+            <p>Only search for patients currently under your care.</p>
+          </div>
         </div>
 
-        {selectedPatient ? (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* Patient Summary Card */}
-            <div className="lg:col-span-1 space-y-6">
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-16 h-16 bg-blue-100 text-nhv-blue rounded-full flex items-center justify-center font-bold text-2xl">
-                    {selectedPatient.name.charAt(0)}
-                  </div>
+        {/* Patient Dashboard View */}
+        {selectedPatient && (
+          <div className="space-y-6 animate-fade-in">
+            {/* Action Bar */}
+            <div className="flex flex-wrap gap-3">
+              <button 
+                onClick={() => setShowAddVisit(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-nhv-blue text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
+              >
+                <Activity className="w-4 h-4" /> Record Visit
+              </button>
+              <button 
+                onClick={() => setShowAddMedication(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors shadow-sm"
+              >
+                <Pill className="w-4 h-4 text-nhv-green" /> Prescribe Meds
+              </button>
+              <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors shadow-sm">
+                <FilePlus className="w-4 h-4 text-nhv-accent" /> Upload Report
+              </button>
+            </div>
+
+            {/* Patient Info Card */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-start gap-6">
+              <div className="hidden sm:flex w-16 h-16 bg-blue-50 text-nhv-blue rounded-full items-center justify-center shrink-0">
+                <User className="w-8 h-8" />
+              </div>
+              <div className="flex-1">
+                <div className="flex justify-between items-start mb-2">
                   <div>
-                    <h2 className="text-lg font-bold text-slate-800">{selectedPatient.name}</h2>
-                    <p className="text-sm text-slate-500">ID: {selectedPatient.id}</p>
+                    <h3 className="text-xl font-bold text-slate-800">{selectedPatient.profiles?.first_name} {selectedPatient.profiles?.last_name}</h3>
+                    <p className="text-sm font-medium text-slate-500">ID: {selectedPatient.health_id} • Blood: <span className="text-nhv-red font-bold">{selectedPatient.blood_group}</span></p>
                   </div>
+                  <span className="px-3 py-1 bg-green-50 text-green-700 text-xs font-bold uppercase rounded-full border border-green-200">
+                    Verified
+                  </span>
                 </div>
                 
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-slate-500">Blood Group</span>
-                    <span className="font-bold text-nhv-red">{selectedPatient.bloodGroup}</span>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 text-sm">
+                  <div>
+                    <p className="text-slate-400">DOB</p>
+                    <p className="font-medium text-slate-700">{selectedPatient.date_of_birth}</p>
                   </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-slate-500">Age / Gender</span>
-                    <span className="font-medium text-slate-800">
-                      {new Date().getFullYear() - new Date(selectedPatient.dob).getFullYear()} yrs / {selectedPatient.gender}
-                    </span>
+                  <div>
+                    <p className="text-slate-400">Gender</p>
+                    <p className="font-medium text-slate-700 capitalize">{selectedPatient.gender}</p>
                   </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-slate-500">Allergies</span>
-                    <span className="font-medium text-red-600">
-                      {selectedPatient.allergies.length > 0 ? selectedPatient.allergies.join(', ') : 'None'}
-                    </span>
+                  <div className="col-span-2">
+                    <p className="text-slate-400">Allergies</p>
+                    <p className="font-medium text-red-600">
+                      {selectedPatient.allergies?.length ? selectedPatient.allergies.join(', ') : 'None'}
+                    </p>
                   </div>
                 </div>
-                <div className="mt-4 pt-4 border-t">
-                  <button onClick={() => window.open(`/emergency/${selectedPatient.id}`, '_blank')} className="w-full text-center text-sm font-medium text-nhv-red hover:underline">
-                    View Emergency Card
-                  </button>
-                </div>
-              </div>
-
-              {/* Active Meds Quick View */}
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                  <Pill className="w-4 h-4 text-nhv-green" /> Active Meds
-                </h3>
-                <ul className="space-y-2 text-sm">
-                  {activeMeds.map(med => (
-                    <li key={med.id} className="flex justify-between items-center">
-                      <span>{med.name}</span>
-                      <span className="text-slate-500 text-xs">{med.dosage}</span>
-                    </li>
-                  ))}
-                  {activeMeds.length === 0 && <li className="text-slate-500 italic">No active meds.</li>}
-                </ul>
               </div>
             </div>
 
-            {/* Action Area */}
-            <div className="lg:col-span-2 space-y-6">
-              
-              {/* Add Visit Form */}
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-nhv-blue">
-                <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-                  <FilePlus className="w-5 h-5 text-nhv-blue" />
-                  Add Clinical Note / Visit
-                </h2>
-                <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); alert('Note added to record (Mock)'); }}>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Diagnosis</label>
-                      <input type="text" className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-nhv-blue outline-none text-sm" placeholder="e.g. Acute Bronchitis" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
-                      <input type="date" className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-nhv-blue outline-none text-sm" defaultValue={new Date().toISOString().split('T')[0]} />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Clinical Notes</label>
-                    <textarea rows={4} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-nhv-blue outline-none text-sm" placeholder="Patient symptoms, observations, advised plan..."></textarea>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Prescription Updates</label>
-                    <input type="text" className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-nhv-blue outline-none text-sm" placeholder="e.g. Start Azithromycin 500mg, stop previous meds" />
-                  </div>
-                  <div className="flex justify-end">
-                    <button type="submit" className="bg-nhv-blue text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-800 transition-colors">
-                      Save to Record
-                    </button>
-                  </div>
-                </form>
-              </div>
-
-              {/* Past History */}
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-nhv-blue" /> Past History
-                </h3>
-                <div className="space-y-3">
-                  {mockVisits.filter(v => v.patientId === selectedPatient.id).map(visit => (
-                    <div key={visit.id} className="p-3 bg-slate-50 border rounded-lg text-sm">
-                      <div className="flex justify-between font-medium mb-1">
-                        <span>{visit.diagnosis}</span>
-                        <span className="text-slate-500">{visit.date}</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Active Medications */}
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-[400px] flex flex-col">
+                <h3 className="text-lg font-semibold text-slate-800 mb-4 border-b pb-2">Active Medications</h3>
+                <div className="flex-1 overflow-y-auto pr-2 space-y-3">
+                  {activeMeds.length > 0 ? activeMeds.map(med => (
+                    <div key={med.id} className="p-3 bg-slate-50 border border-slate-100 rounded-lg flex justify-between">
+                      <div>
+                        <p className="font-bold text-slate-800">{med.name} <span className="text-xs font-normal text-slate-500 ml-1">{med.dosage}</span></p>
+                        <p className="text-xs text-slate-500 mt-1">{med.frequency}</p>
                       </div>
-                      <p className="text-slate-600 mb-1">{visit.notes}</p>
-                      <p className="text-xs text-slate-400">Recorded by: {visit.doctorId}</p>
+                      <div className="text-right">
+                        <p className="text-xs text-slate-400">Started</p>
+                        <p className="text-sm font-medium text-slate-700">{med.start_date}</p>
+                      </div>
                     </div>
-                  ))}
+                  )) : (
+                    <p className="text-sm text-slate-500 italic text-center mt-10">No active medications found.</p>
+                  )}
                 </div>
               </div>
 
+              {/* Visit History */}
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-[400px] flex flex-col">
+                <h3 className="text-lg font-semibold text-slate-800 mb-4 border-b pb-2">Visit History</h3>
+                <div className="flex-1 overflow-y-auto pr-2 space-y-4">
+                  {patientVisits.length > 0 ? patientVisits.map(visit => (
+                    <div key={visit.id} className="relative pl-4 border-l-2 border-slate-200 pb-4 last:pb-0">
+                      <div className="absolute w-3 h-3 bg-nhv-blue rounded-full -left-[7px] top-1 border-2 border-white"></div>
+                      <p className="text-xs text-slate-400 mb-1">{new Date(visit.visit_date).toLocaleDateString()} • {visit.hospital_name}</p>
+                      <p className="font-semibold text-slate-800 text-sm">{visit.diagnosis}</p>
+                      <p className="text-xs text-slate-600 mt-1 leading-relaxed line-clamp-2">{visit.notes}</p>
+                    </div>
+                  )) : (
+                    <p className="text-sm text-slate-500 italic text-center mt-10">No visit history found.</p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-        ) : (
-          searchQuery && <div className="text-center py-12 text-slate-500">No patient found with this ID/Aadhaar.</div>
         )}
       </main>
+
+      {/* Modals */}
+      {showAddVisit && selectedPatient && (
+        <AddVisitForm 
+          patientId={selectedPatient.id} 
+          doctorId={user.id}
+          hospitalName={user.hospital}
+          onClose={() => setShowAddVisit(false)}
+          onSuccess={handleDataAdded}
+        />
+      )}
+      
+      {showAddMedication && selectedPatient && (
+        <AddMedicationForm 
+          patientId={selectedPatient.id} 
+          doctorId={user.id}
+          hospitalName={user.hospital}
+          onClose={() => setShowAddMedication(false)}
+          onSuccess={handleDataAdded}
+        />
+      )}
     </div>
   );
 }

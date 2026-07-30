@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { mockPatients, mockDoctors } from '../data/mockDb';
-import type { Role } from '../data/mockDb';
+import { supabase } from '../lib/supabase';
+import type { Patient, Doctor, UserRole } from '../types/database';
 
 interface AuthState {
   isAuthenticated: boolean;
-  user: any | null; // Patient | Doctor | etc.
-  role: Role | null;
+  user: any | null; // Patient or Doctor
+  role: UserRole | null;
 }
 
 interface AuthContextType extends AuthState {
@@ -24,37 +24,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const loginPatient = async (aadhaar: string) => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-    // Simulated mock authentication: matching mock data for demo
-    // We only take the last 4 digits to match our masked 'XXXX-XXXX-1234' format roughly.
-    const last4 = aadhaar.slice(-4);
-    const patient = mockPatients.find(p => p.aadhaarMasked.endsWith(last4));
-    
-    if (patient) {
-      setAuthState({
-        isAuthenticated: true,
-        user: patient,
-        role: 'patient',
-      });
-      return true;
+    // We expect the aadhaar to match exactly the masked format, e.g. XXXX-XXXX-4589
+    // For demo purposes, if user types just 4 digits, we format it.
+    let searchAadhaar = aadhaar;
+    if (aadhaar.length === 4) {
+      searchAadhaar = `XXXX-XXXX-${aadhaar}`;
     }
-    return false;
+
+    const { data, error } = await supabase
+      .from('patients')
+      .select('*, profiles(first_name, last_name, phone)')
+      .eq('aadhaar_masked', searchAadhaar)
+      .single();
+
+    if (error || !data) {
+      console.error('Login failed:', error);
+      return false;
+    }
+
+    setAuthState({
+      isAuthenticated: true,
+      user: data as unknown as Patient,
+      role: 'patient',
+    });
+    return true;
   };
 
   const loginDoctor = async (licenseNo: string) => {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    const doctor = mockDoctors.find(d => d.licenseNo === licenseNo);
-    
-    if (doctor) {
-      setAuthState({
-        isAuthenticated: true,
-        user: doctor,
-        role: 'doctor',
-      });
-      return true;
+    const { data, error } = await supabase
+      .from('doctors')
+      .select('*, profiles(first_name, last_name, phone)')
+      .eq('license_no', licenseNo)
+      .single();
+
+    if (error || !data) {
+      console.error('Doctor login failed:', error);
+      return false;
     }
-    return false;
+
+    setAuthState({
+      isAuthenticated: true,
+      user: data as unknown as Doctor,
+      role: 'doctor',
+    });
+    return true;
   };
 
   const logout = () => {

@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-nhv-lightGray text-slate-800 antialiased;
+  }
+}
+
+.dark-theme {
+  @apply bg-nhv-dark text-white;
+}
+
+/* Glassmorphism utilities */
+.glass-panel {
+  @apply bg-white/10 backdrop-blur-md border border-white/20 shadow-xl;
+}
+.glass-panel-dark {
+  @apply bg-black/30 backdrop-blur-lg border border-white/10 shadow-2xl;
+}
+
+/* Hide scrollbar for clean look in some components */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
